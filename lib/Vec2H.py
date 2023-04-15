@@ -67,9 +67,24 @@ def select_rot(t, thres):
     elif t[2][1]>thres:
         return xp
     elif t[2][2]>thres:
-        return np.array([[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
+        return np.array([[-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
     else:
         return np.eye(4)
+
+
+def opt_pos(H):
+    R90 = np.array([[0,-1],[1,0]])
+    Rxy = H[0:2,0:2]
+    xmax = max(abs(H[0][0]), abs(H[1][0]))
+    while (Rxy[0][0] != xmax):
+        Rxy = R90@Rxy
+    H[0:2,0:2] = Rxy
+    return H
+
+
+
+
+
 
 if __name__ == '__main__':
     print(transform( np.array([-.2, -.3, .5]), np.array([0,pi,pi])))

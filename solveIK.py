@@ -232,12 +232,12 @@ class IK:
         """
 
         q = seed
-        rollout = []
+        # rollout = []
         loop_num = 0
         while True:
             loop_num+=1
 
-            rollout.append(q)
+            # rollout.append(q)
 
             # Primary Task - Achieve End Effector Pose
             dq_ik = self.end_effector_task(self, q,target)
@@ -263,7 +263,7 @@ class IK:
             q = q + dq
 
         success = self.is_valid_solution(q,target)
-        return q, success, rollout
+        return q, success #, rollout
 
 ################################
 ## Simple Testing Environment ##
@@ -276,8 +276,9 @@ if __name__ == "__main__":
     ik = IK()
 
     # matches figure in the handout
-    seed = np.array([0,0,0,-pi/2,0,pi/2,pi/4])
+    # seed = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
     # seed = np.array([-pi / 2, -pi / 2, -pi / 2, -pi / 2, 0, pi / 2, pi / 4])
+    seed = np.array([0, 0, 0, -pi / 2, 0, pi / 2, pi / 4])
 
     # lower = np.array([-2.8973,-1.7628,-2.8973,-3.0718,-2.8973,-0.0175,-2.8973])
     # upper = np.array([2.8973,1.7628,2.8973,-0.0698,2.8973,3.7525,2.8973])
@@ -296,15 +297,27 @@ if __name__ == "__main__":
     #                    [0., 0., 0., 1.]]
     #                   )
 
-    target = transform(np.array([0.562, 0.259, 0.201]), np.array([0,pi,pi]))
-    print(target)
-    q, success, rollout = ik.inverse(target, seed)
+    # target = transform(np.array([0.562, 0.259, 0.201]), np.array([0,pi,pi]))
+    # print(target)
 
-    for i, q in enumerate(rollout):
-        joints, pose = ik.fk.forward(q)
-        d, ang = IK.distance_and_angle(target,pose)
-        print('iteration:',i,' q =',q, ' d={d:3.4f}  ang={ang:3.3f}'.format(d=d,ang=ang))
+ #
+ #    target = np.array([[ 8.37905733e-01,  5.45814971e-01,  1.48970733e-05,  4.97631058e-01],
+ # [-5.45814971e-01,  8.37905733e-01, -9.79155077e-06, -2.32700626e-01],
+ # [ 1.78267181e-05, -7.33509194e-08, -1.00000000e+00,  2.25411307e-01+0.1],
+ # [ 0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  1.00000000e+00]]                      )
+    target = np.array([[ 1.,     0.,    -0.,     0.562]
+    , [ 0.,    -1.,     0.,    -0.169]
+    ,[-0.,    -0.,    -1.,     0.6]
+    ,[ 0.,    0.,     0.,    1.   ]])
+
+    # q, success, rollout = ik.inverse(target, seed)
+    q, success = ik.inverse(target, seed)
+
+    # for i, q in enumerate(rollout):
+    #     joints, pose = ik.fk.forward(q)
+    #     d, ang = IK.distance_and_angle(target,pose)
+    #     print('iteration:',i,' q =',q, ' d={d:3.4f}  ang={ang:3.3f}'.format(d=d,ang=ang))
 
     print("Success: ",success)
     print("Solution: ",q)
-    print("Iterations:", len(rollout))
+    # print("Iterations:", len(rollout))
