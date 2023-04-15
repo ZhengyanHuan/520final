@@ -53,20 +53,21 @@ def transform(d,rpy):
     """
     return trans(d) @ roll(rpy[0]) @ pitch(rpy[1]) @ yaw(rpy[2])
 
-def select_rot(t, thres):
+def select_rot(t):
+    zval = max(abs(t[2,0:3]))
     yp = np.array([[0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1]]) #x=-1
     yn = np.array([[0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1]])
     xp = np.array([[1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
     xn = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]]) #y=1
-    if t[2][0]<-thres:
+    if t[2][0]==-zval:
         return yp
-    elif t[2][0]>thres:
+    elif t[2][0]==zval:
         return yn
-    elif t[2][1]<-thres:
+    elif t[2][1]==-zval:
         return xn
-    elif t[2][1]>thres:
+    elif t[2][1]==zval:
         return xp
-    elif t[2][2]>thres:
+    elif t[2][2]==zval:
         return np.array([[-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1]])
     else:
         return np.eye(4)
