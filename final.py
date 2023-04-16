@@ -13,7 +13,8 @@
 #       2. If the gripper somehow fails to grip the block, trying moving other block directly.
 #       These two points are used for handling unforeseen problems in reality. I have not encountered
 #       such situation in simulation yet.
-
+# v2.3: 4/16/2023
+#       1. The code now works for blue team
 import sys
 import numpy as np
 from copy import deepcopy
@@ -60,14 +61,26 @@ if __name__ == "__main__":
     H_ee_camera = detector.get_H_ee_camera()
     # print(H_ee_camera)
 
-    startH = np.array([[1., 0., -0., 0.562]
-                          , [0., -1., 0., -0.169]
-                          , [-0., -0., -1., 0.6]
-                          , [0., 0., 0., 1.]]) # change this and use this in solveik to get the start position: start_position2
 
-    start_position_n = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
-    posdest = start_position_n
-    start_position2 = np.array([-0.1681, 0.24085, -0.16154, -1.04058, 0.04007, 1.27863, 0.47189])
+    if team == 'red':
+        startH = np.array([[1., 0., -0., 0.562]
+                              , [0., -1., 0., -0.169]
+                              , [-0., -0., -1., 0.6]
+                              , [0., 0., 0., 1.]]) # change this and use this in solveik to get the start position: start_position2
+
+        ydest = 0.169
+        start_position2 = np.array([-0.1681, 0.24085, -0.16154, -1.04058, 0.04007, 1.27863, 0.47189])
+        start_position_n = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
+        posdest = start_position_n
+    else:
+        startH = np.array([[1., 0., -0., 0.562]
+                              , [0., -1., 0., 0.169]
+                              , [-0., -0., -1., 0.6]
+                              , [0., 0., 0.,1.]])  # change this and use this in solveik to get the start position: start_position2
+        ydest = -0.169
+        start_position2 = np.array([ 0.25669,  0.23861,  0.04605, -1.04074, -0.01136,  1.27912,  1.08358])
+        start_position_n = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
+        posdest = start_position_n
     # The position to take a photo of the static blocks, should be changed according to real situaltion
     #    target = transform(np.array([0.562,-0.169,0.538]), np.array([0,pi,pi]))
     arm.safe_move_to_position(start_position2)
@@ -158,7 +171,7 @@ if __name__ == "__main__":
         arm.safe_move_to_position(tmppos)  # move back to the postion above the block to avoid touching other blocks
         # This step may also be optimized out by firstly moving the most left/right block.
 
-        destpos = np.array([0.562, 0.169, base + height])  # destination of the block (x,y,x)
+        destpos = np.array([0.562, ydest, base + height])  # destination of the block (x,y,x)
         # base: the height need for the gripper to avoid touching the block beneath it
         # height: the height of the tower, start with 0, (1 block: 0.05)
         destangle = np.array([0, pi, pi])  # destination of the block (angle)
@@ -181,7 +194,7 @@ if __name__ == "__main__":
         arm.safe_move_to_position(posdest)  # move to destination
         arm.exec_gripper_cmd(0.2, 50)  # release the gripper
 
-        destpos = np.array([0.562, 0.169, base + height + 0.1])
+        destpos = np.array([0.562, ydest, base + height + 0.1])
         destangle = np.array([0, pi, pi])
         destH = transform(destpos, destangle)
         q, success = ik.inverse(destH, posdest)
