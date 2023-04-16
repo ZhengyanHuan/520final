@@ -8,6 +8,11 @@
 #       6. Possible to optimize: See the comments
 # v2.1: 4/15/2023
 #       1. improve the select rotation function, do not need threshold any more.
+# v2.2: 4/16/2023
+#       1. If solveIK fails, retry once. If still fails, give up moving this block
+#       2. If the gripper somehow fails to grip the block, trying moving other block directly.
+#       These two points are used for handling unforeseen problems in reality. I have not encountered
+#       such situation in simulation yet.
 
 import sys
 import numpy as np
@@ -58,14 +63,16 @@ if __name__ == "__main__":
     startH = np.array([[1., 0., -0., 0.562]
                           , [0., -1., 0., -0.169]
                           , [-0., -0., -1., 0.6]
-                          , [0., 0., 0., 1.]])
+                          , [0., 0., 0., 1.]]) # change this and use this in solveik to get the start position: start_position2
 
     start_position_n = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
+    posdest = start_position_n
     start_position2 = np.array([-0.1681, 0.24085, -0.16154, -1.04058, 0.04007, 1.27863, 0.47189])
     # The position to take a photo of the static blocks, should be changed according to real situaltion
     #    target = transform(np.array([0.562,-0.169,0.538]), np.array([0,pi,pi]))
     arm.safe_move_to_position(start_position2)
     arm.exec_gripper_cmd(0.2, 50)  # open the gripper
+    print(arm.get_gripper_state())
 
     cubeH_list = []
     # Detect some static blocks...
@@ -78,17 +85,17 @@ if __name__ == "__main__":
     base = 0.23
     for i in range(4):
         H1 = startH @ H_ee_camera @ cubeH_list[i]  # calculate the position of a block w.r.t to ROBOT's world frame
-        print("cubeH")
-        print(cubeH_list[i])  # the position of a block w.r.t to camera
-        print("H1")
-        print(H1)  # the position of a block w.r.t to ROBOT's world frame
-        print(select_rot(H1))  # The threshold should be changed according to reality
+        # print("cubeH")
+        # print(cubeH_list[i])  # the position of a block w.r.t to camera
+        # print("H1")
+        # print(H1)  # the position of a block w.r.t to ROBOT's world frame
+        # print(select_rot(H1))  # The threshold should be changed according to reality
         H1 = H1 @ select_rot(H1)  # rotate to make z always point downwards
-        print("beforeopt")
-        print(H1)  # the position of a block w.r.t to ROBOT's world frame after rotation
+        # print("beforeopt")
+        # print(H1)  # the position of a block w.r.t to ROBOT's world frame after rotation
         H1 = opt_pos(H1)
-        print("afteropt")
-        print(H1)  # optimize the pose of the gripper to avoid reaching joint limits
+        # print("afteropt")
+        # print(H1)  # optimize the pose of the gripper to avoid reaching joint limits
         ###############################
         Htmp = H1.copy()
         Htmp[2][3] += (0.1 + height)
@@ -98,22 +105,55 @@ if __name__ == "__main__":
 
         if i == 0:  # change the start position of each iteration,  we only need the end configuration, so the start
             # position does not matter much. But we need to select one to avoid reaching joint limits when computing.
-            initial_pos = start_position_n
+            initial_pos = start_position_n #can be changed
         else:
             initial_pos = posdest
 
         q, success = ik.inverse(Htmp, initial_pos)  # solve IK
-        print(success)  # show information
+          # show information
+
+        ############# Retry process, should be rarely used##################
+        if success == False:
+            print("Retrying")
+            q, success = ik.inverse(Htmp, start_position_n)
+            if success == False:
+                arm.exec_gripper_cmd(0.2, 50)
+                continue
+            else:
+                print(success)
+        else:
+            print(success)
+        ###########################################################################
+
         tmppos = q
         arm.safe_move_to_position(tmppos)  # Move to the postion, which is over the block
 
         #####################################
         q, success = ik.inverse(H1, tmppos)
+
+ ############# Retry process, should be rarely used##################
+        if success == False:
+            print("Retrying")
+            q, success = ik.inverse(H1, start_position_n)
+            if success == False:
+                arm.exec_gripper_cmd(0.2, 50)
+                continue
+            else:
+                print(success)
+        else:
+            print(success)
+###########################################################################
         prepos = q
         # prepos = pos
 
         arm.safe_move_to_position(prepos)  # Move to the block!
-        arm.exec_gripper_cmd(0.02, 50)  # grip the block
+        arm.exec_gripper_cmd(0.00, 50)  # grip the block
+        gstate = arm.get_gripper_state()
+        print(gstate)
+        if gstate['position'][0] < 0.01:
+            print("fail to catch the block")
+            arm.exec_gripper_cmd(0.2, 50)
+            continue
 
         arm.safe_move_to_position(tmppos)  # move back to the postion above the block to avoid touching other blocks
         # This step may also be optimized out by firstly moving the most left/right block.
@@ -124,6 +164,18 @@ if __name__ == "__main__":
         destangle = np.array([0, pi, pi])  # destination of the block (angle)
         destH = transform(destpos, destangle)
         q, success = ik.inverse(destH, tmppos)
+        ############# Retry process, should be rarely used##################
+        if success == False:
+            print("Retrying")
+            q, success = ik.inverse(destH, start_position_n)
+            if success == False:
+                arm.exec_gripper_cmd(0.2, 50)
+                continue
+            else:
+                print(success)
+        else:
+            print(success)
+        ###########################################################################
         # destconfig = np.array([ 0.41668, 0.35412,  0.01618, -1.93268, -0.00744,  2.28674,  1.22214])
         posdest = q
         arm.safe_move_to_position(posdest)  # move to destination
@@ -133,6 +185,18 @@ if __name__ == "__main__":
         destangle = np.array([0, pi, pi])
         destH = transform(destpos, destangle)
         q, success = ik.inverse(destH, posdest)
+        ############# Retry process, should be rarely used##################
+        if success == False:
+            print("Retrying")
+            q, success = ik.inverse(destH, start_position_n)
+            if success == False:
+                arm.exec_gripper_cmd(0.2, 50)
+                continue
+            else:
+                print(success)
+        else:
+            print(success)
+        ###########################################################################
         posdest = q
         arm.safe_move_to_position(posdest)  # move over the tower to avoid touching it
 
