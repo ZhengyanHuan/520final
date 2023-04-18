@@ -82,8 +82,33 @@ def opt_pos(H):
     H[0:2,0:2] = Rxy
     return H
 
+def opt_pos_D(H):
+    R90 = np.array([[0,-1],[1,0]])
+    Rxy = H[0:2,0:2]
+    xmax = max(abs(H[0][0]), abs(H[1][0]))
+    while (Rxy[1][0] != xmax):
+        Rxy = R90@Rxy
+    H[0:2,0:2] = Rxy
+    return H
 
+def predict(H, t_robot, T): #t_robot is the time needed for the end-effector to reach the table, T is the time need for the table to rotate 2pi
+    theta = t_robot/T * 2 * pi
+    H[0:2,:] = rot_2D(theta, H[0:2,:])
+    return H
 
+def rot_2D(theta, mat): # Reduced dimension for smaller computation complexity
+    # xo = 0 # already taken into consideration
+    yo = 0.99
+    # dx = xo - xo *cos(theta) + yo*sin(theta)
+    # dy = yo - yo * cos(theta) - xo *sin(theta)
+    s = sin(theta)
+    c = cos(theta)
+    dx = yo * s
+    dy = yo - yo * c
+
+    rotmat = np.array([[c,-s],[s,c]])
+
+    return rotmat@mat+ np.array([[0,0,0,dx],[0,0,0,dy]])
 
 
 

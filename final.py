@@ -15,11 +15,13 @@
 #       such situation in simulation yet.
 # v2.3: 4/16/2023
 #       1. The code now works for blue team
+# v3: 4/18/2023
+#       1. Preliminary realize stacking dynamic blocks
 import sys
 import numpy as np
 from copy import deepcopy
 from math import pi
-from lib.Vec2H import transform, select_rot, opt_pos
+from lib.Vec2H import transform, select_rot, opt_pos, predict,opt_pos_D
 import solveIK
 
 import rospy
@@ -53,7 +55,9 @@ if __name__ == "__main__":
     print("****************")
     input("\nWaiting for start... Press ENTER to begin!\n")  # get set!
     print("Go!\n")  # go!
-
+    height = 0
+    ik = solveIK.IK()
+    base = 0.23
     # STUDENT CODE HERE
 
     # get the transform from camera to panda_end_effector
@@ -61,7 +65,7 @@ if __name__ == "__main__":
     H_ee_camera = detector.get_H_ee_camera()
     # print(H_ee_camera)
 
-
+    '''
     if team == 'red':
         startH = np.array([[1., 0., -0., 0.562]
                               , [0., -1., 0., -0.169]
@@ -93,9 +97,9 @@ if __name__ == "__main__":
         print(name, '\n', pose)
         cubeH_list.append(pose)
 
-    ik = solveIK.IK()
-    height = 0
-    base = 0.23
+    
+    
+    # base = 0.23
     for i in range(4):
         H1 = startH @ H_ee_camera @ cubeH_list[i]  # calculate the position of a block w.r.t to ROBOT's world frame
         # print("cubeH")
@@ -215,6 +219,99 @@ if __name__ == "__main__":
 
         height += 0.05
 
-    # Move around...
+#####################################################################################################################################
+    '''
+    if team == 'red':
+        startH_D = np.array([[0., 1., -0., -0.15]
+                              , [1., 0., 0., 0.68]
+                              , [-0., -0., -1., 0.5]
+                              , [0., 0., 0., 1.]]) #  # change this and use this in solveik to get the start position: start_position2
+        # ydest = 0.68
+        ydest = 0.169
+        startconfig_D = np.array([ 1.6743,   0.65995,  0.25624, -0.66686, -0.16135,  1.31402,  1.0517 ])
+        # startconfig_N = np.array([ 0.97662,  0.22038,  0.63358, -1.90847, -0.14896,  2.08231,  0.88649])
+        startconfig_N = np.array([ 1.28822,  0.62151,  0.35068, -1.54818, -0.23783,  2.1274,   0.91926])
+        start_position_dest = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
 
-    # END STUDENT CODE
+
+    t_robot = 2
+    T = 100
+
+
+    arm.exec_gripper_cmd(0.2, 50)
+
+    H_ee_camera = detector.get_H_ee_camera()
+    for test_num in range(5):
+        t_robot = 2
+        cubeH_list_D = []
+        arm.safe_move_to_position(startconfig_D)
+        while (len(cubeH_list_D) == 0):
+            for (name, pose) in detector.get_detections():
+                print(name, '\n', pose)
+                cubeH_list_D.append(pose)
+
+
+        for i in range(len(cubeH_list_D)):
+            HD = startH_D @ H_ee_camera @ cubeH_list_D[i]
+
+            HD1 = HD @ select_rot(HD)  # rotate to make z always point downwards
+            if HD1[2][2]>-0.95: # Used to check whether the block is suitable
+                continue
+            else:
+                print(HD1)
+                HD_predicted = predict(HD1, t_robot, T)
+                print(HD_predicted)
+                HD_predicted = opt_pos_D(HD_predicted)
+                print(HD_predicted)
+                # Htmp = HD_predicted.copy()
+                # Htmp[2][3] += (0.1 + height)
+                # the position to hover over the block to avoid toching other blocks when approaching the block
+                # this step maybe can be optimized out to save time. But at this step, I still keep this to ensure the process of
+                # gripping successful
+
+                if i == 0:  # change the start position of each iteration,  we only need the end configuration, so the start
+                    # position does not matter much. But we need to select one to avoid reaching joint limits when computing.
+                    initial_pos = startconfig_N  # can be changed
+                else:
+                    initial_pos = startconfig_N
+
+                # q, success = ik.inverse(Htmp, initial_pos)  # solve IK
+                # print(success)
+                # arm.safe_move_to_position(q)
+                q, success = ik.inverse(HD_predicted, initial_pos)
+                print(success)
+                if success == False:
+                    t_robot += 0.4
+                    continue
+                # else:
+                #     t_robot = 2
+                arm.safe_move_to_position(q)
+                arm.exec_gripper_cmd(0.000, 100)
+                gstate = arm.get_gripper_state()
+                print(gstate)
+                if gstate['position'][0] < 0.01:
+                    print("fail to catch the block")
+                    arm.exec_gripper_cmd(0.2, 50)
+                    continue
+
+                q[1] = q[1]-pi/4
+                # print(success)
+                arm.safe_move_to_position(q)
+
+                destpos = np.array([0.562, ydest, base + height])  # destination of the block (x,y,x)
+                # base: the height need for the gripper to avoid touching the block beneath it
+                # height: the height of the tower, start with 0, (1 block: 0.05)
+                destangle = np.array([0, pi, pi])  # destination of the block (angle)
+                destH = transform(destpos, destangle)
+                q, success = ik.inverse(destH, start_position_dest)
+                print(success)
+                arm.safe_move_to_position(q)
+                arm.exec_gripper_cmd(0.2, 100)
+                q[1] = q[1]-pi/4
+                arm.safe_move_to_position(q)
+                height+=0.05
+                break
+
+
+
+
