@@ -21,13 +21,16 @@
 #       1. Now the code only need solveIK once for dynamic blocks and twice for static blocks
 #       2. Update the prediction function for dynamic blocks
 #       3. Solve the problem that when failed to grab the dynamic block, the robot won't return to previous position
+# v3.2: 4/21/2023
+#       1. The code now works for blue team
+#       2. Uodate the prediction function, blue team still needs optimization
 
 
 import sys
 import numpy as np
 from copy import deepcopy
 from math import pi
-from lib.Vec2H import transform, select_rot, opt_pos, predict, opt_pos_D
+from lib.Vec2H import transform, select_rot, opt_pos, predictred, predictblue, opt_pos_D_red, opt_pos_D_blue
 import solveIK
 
 import rospy
@@ -158,7 +161,7 @@ if __name__ == "__main__":
     # STUDENT CODE HERE
 
     # get the transform from camera to panda_end_effector
-    # '''
+    '''
     H_ee_camera = detector.get_H_ee_camera()
     # print(H_ee_camera)
 
@@ -287,7 +290,7 @@ if __name__ == "__main__":
         height += 0.05
 
 #####################################################################################################################################
-    #'''
+    '''
     if team == 'red':
         startH_D = np.array([[0., 1., -0., -0.15]
                                 , [1., 0., 0., 0.68]
@@ -299,6 +302,21 @@ if __name__ == "__main__":
         startconfig_D = np.array([1.6743, 0.65995, 0.25624, -0.66686, -0.16135, 1.31402, 1.0517])
         # startconfig_N = np.array([ 0.97662,  0.22038,  0.63358, -1.90847, -0.14896,  2.08231,  0.88649])
         startconfig_N = np.array([1.28822, 0.62151, 0.35068, -1.54818, -0.23783, 2.1274, 0.91926])
+        start_position_dest = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
+
+    if team == 'blue':
+        startH_D = np.array([[0, -1, 0, 0.149516011],
+                             [-1, 0, 0, -0.680106155],
+                             [0, 0, -1, 0.499996060],
+                             [0, 0, 0,
+                              1]])  # # change this and use this in solveik to get the start position: start_position2
+        # ydest = 0.68
+        ydest = -0.169
+        startconfig_D = np.array([-1.468, 0.65995, 0.25624, -0.66686, -0.16135, 1.31402, 1.0517])
+        # startconfig_N = np.array([ 0.97662,  0.22038,  0.63358, -1.90847, -0.14896,  2.08231,  0.88649])
+        # startconfig_N = np.array([ -1.468, 0.65995, 0.25624, -0.66686, -0.16135, 1.31402, -1.0517])
+        # startconfig_N = np.array([-1.4526, 0.59678, -0.1454, -1.55221, 0.09694, 2.14192, -2.41111])
+        startconfig_N = np.array([-1.28822, 0.62151, 0.35068, -1.54818, -0.23783, 2.1274, 0.91926])
         start_position_dest = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
 
     t_robot = 2.7
@@ -327,21 +345,39 @@ if __name__ == "__main__":
             if HD1[2][2] > -0.95:  # Used to check whether the block is suitable
                 continue
             else:
-                print(HD1)
-                if HD1[0][3] > -0.05:
-                    # HD_predicted = predict(HD1, t_robot + 0.4, T)
-                    mode = 1
-                    HD_predicted = predict(HD1, t_robot + 1, T)
-                    print("situation2")
-                    # continue
-                elif HD1[0][3] > -0.1: # change this for more precise prediction, need more test, maybe need a function to describe
-                    print("situation1")
-                    HD_predicted = predict(HD1, t_robot+0.4, T)
+                if team == 'red':
+                    print(HD1)
+                    if HD1[0][3] > -0.05:
+                        # HD_predicted = predict(HD1, t_robot + 0.4, T)
+                        mode = 1
+                        HD_predicted = predictred(HD1, t_robot + 1, T)
+                        print("situation2")
+                        # continue
+                    elif HD1[0][3] > -0.1: # change this for more precise prediction, need more test, maybe need a function to describe
+                        print("situation1")
+                        HD_predicted = predictred(HD1, t_robot+0.4, T)
+                    else:
+                        HD_predicted = predictred(HD1, t_robot, T)
+                    print(HD_predicted)
+                    HD_predicted = opt_pos_D_red(HD_predicted, mode)
+                    print(HD_predicted)
                 else:
-                    HD_predicted = predict(HD1, t_robot, T)
-                print(HD_predicted)
-                HD_predicted = opt_pos_D(HD_predicted, mode)
-                print(HD_predicted)
+                    print(HD1)
+                    if HD1[0][3] < 0.05:
+                        # HD_predicted = predict(HD1, t_robot + 0.4, T)
+                        mode = 1
+                        HD_predicted = predictblue(HD1, t_robot + 1, T)
+                        print("situation2")
+                        # continue
+                    elif HD1[0][
+                        3] < 0.1:  # change this for more precise prediction, need more test, maybe need a function to describe
+                        print("situation1")
+                        HD_predicted = predictblue(HD1, t_robot + 0.4, T)
+                    else:
+                        HD_predicted = predictblue(HD1, t_robot, T)
+                    print(HD_predicted)
+                    HD_predicted = opt_pos_D_blue(HD_predicted, mode)
+                    print(HD_predicted)
                 # Htmp = HD_predicted.copy()
                 # Htmp[2][3] += (0.1 + height)
                 # the position to hover over the block to avoid toching other blocks when approaching the block
