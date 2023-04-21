@@ -95,12 +95,16 @@ def opt_pos(H):
 #     H[0:2,0:2] = Rxy
 #     return H
 
-def opt_pos_D(H):
+def opt_pos_D(H, mode):
     R90 = np.array([[0,-1],[1,0]])
     Rxy = H[0:2,0:2]
     xmax = max(abs(H[0][0]), abs(H[1][0]))
-    while (Rxy[1][0] != xmax):
-        Rxy = R90 @ Rxy
+    if mode == 1:  
+        while (Rxy[1][0] != xmax):
+            Rxy = R90 @ Rxy
+    else:
+        while (Rxy[0][0] != xmax):
+            Rxy = R90 @ Rxy
     H[0:2,0:2] = Rxy
     return H
 
