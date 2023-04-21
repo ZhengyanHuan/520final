@@ -319,7 +319,6 @@ if __name__ == "__main__":
         startconfig_N = np.array([-1.28822, 0.62151, 0.35068, -1.54818, -0.23783, 2.1274, 0.91926])
         start_position_dest = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
 
-    t_robot = 2.7
     t_add = 0.7
     T = 100
 
@@ -366,15 +365,15 @@ if __name__ == "__main__":
                     if HD1[0][3] < 0.05:
                         # HD_predicted = predict(HD1, t_robot + 0.4, T)
                         mode = 1
-                        HD_predicted = predictblue(HD1, t_robot + 1, T)
+                        HD_predicted = predictblue(HD1, t_robot + 0.4 +1.2, T)
                         print("situation2")
                         # continue
                     elif HD1[0][
                         3] < 0.1:  # change this for more precise prediction, need more test, maybe need a function to describe
                         print("situation1")
-                        HD_predicted = predictblue(HD1, t_robot + 0.4, T)
+                        HD_predicted = predictblue(HD1, t_robot + 0.4+0.8, T)
                     else:
-                        HD_predicted = predictblue(HD1, t_robot, T)
+                        HD_predicted = predictblue(HD1, t_robot+0.4, T)
                     print(HD_predicted)
                     HD_predicted = opt_pos_D_blue(HD_predicted, mode)
                     print(HD_predicted)
