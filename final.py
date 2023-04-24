@@ -32,6 +32,7 @@ from copy import deepcopy
 from math import pi
 from lib.Vec2H import transform, select_rot, opt_pos, predictred, predictblue, opt_pos_D_red, opt_pos_D_blue
 import solveIK
+import time
 
 import rospy
 # Common interfaces for interacting with both the simulation and real environments!
@@ -155,13 +156,14 @@ if __name__ == "__main__":
     print("****************")
     input("\nWaiting for start... Press ENTER to begin!\n")  # get set!
     print("Go!\n")  # go!
+    start_time = time.time()
     height = 0
     ik = solveIK.IK()
     base = 0.25
     # STUDENT CODE HERE
 
     # get the transform from camera to panda_end_effector
-    '''
+    # ''' staticblock
     H_ee_camera = detector.get_H_ee_camera()
     # print(H_ee_camera)
 
@@ -290,7 +292,8 @@ if __name__ == "__main__":
         height += 0.05
 
 #####################################################################################################################################
-    '''
+    # '''
+    # ''' dynamicblock
     if team == 'red':
         startH_D = np.array([[0., 1., -0., -0.15]
                                 , [1., 0., 0., 0.68]
@@ -325,8 +328,8 @@ if __name__ == "__main__":
     arm.exec_gripper_cmd(0.2, 50)
 
     H_ee_camera = detector.get_H_ee_camera()
-    for test_num in range(20):
-        if height>0.05*8:
+    for test_num in range(100):
+        if height>0.05*10:
             break
         t_robot = 2.5
         mode = 1
@@ -341,7 +344,7 @@ if __name__ == "__main__":
             HD = startH_D @ H_ee_camera @ cubeH_list_D[i]
 
             HD1 = HD @ select_rot(HD)  # rotate to make z always point downwards
-            if HD1[2][2] > -0.95:  # Used to check whether the block is suitable
+            if HD1[2][2] > -0.95 or HD1[2][3] < 0.2:  # Used to check whether the block is suitable
                 continue
             else:
                 if team == 'red':
@@ -425,7 +428,47 @@ if __name__ == "__main__":
                 arm.safe_move_to_position(q)
                 height += 0.05
                 break
+    # '''
+    # finalblock
+    blocknum = 7
+    if team == 'red':
+        arm.safe_move_to_position(np.array([0.48191, 0.70581, 0.43095, -1.64602, 0.86034, 1.18666, 1.58699]))
+        arm.safe_move_to_position(np.array([1.26903, 1.68165, 0.77691, -0.1, 0.76238, 1.26121, 2.24985]))
+        while True:
+            arm.exec_gripper_cmd(0.0, 50)
+            gstate = arm.get_gripper_state()
+            if gstate['position'][0] > 0.01 and gstate['position'][1] > 0.01:
+                break
+            arm.exec_gripper_cmd(0.2, 50)
 
+        while time.time()-start_time <= 60*4+30:
+            pass
 
+        arm.safe_move_to_position(np.array([1.26903, 1.68165-pi/4, 0.77691, -0.1, 0.76238, 1.26121, 2.24985]))
+        # desheight = int((base + height) * 100)
+        desheight = int((base + 0.05*blocknum) * 100)
+        q = redposdict[desheight]
+        arm.safe_move_to_position(q)
+    else:
+        #arm.safe_move_to_position(np.array([-1.5, 1.3, 1.5, -1.64602, -2.8, 1.18666, 2.5]))
+        # q = blueposdict[int((base + 0.05 * 6) * 100)]
+        # arm.safe_move_to_position(q)
+        # q[1] = q[1] - pi / 16
+        # arm.safe_move_to_position(q)
 
+        arm.safe_move_to_position(np.array([-1.3227  , 1.05736 , 0.07333 ,-0.9511 , -2.55619 , 2.61064 , -2.89]))
+        while True:
+            arm.exec_gripper_cmd(0.0, 50)
+            gstate = arm.get_gripper_state()
+            if gstate['position'][0] > 0.01 and gstate['position'][1] > 0.01:
+                break
+            arm.exec_gripper_cmd(0.2, 50)
 
+        while time.time()-start_time <= 60*4+30:
+            pass
+
+        arm.safe_move_to_position(np.array([-1.3227  , 1.05736-pi/4 , 0.07333 ,-0.9511 , -2.55619 , 2.61064 , -2.89]))
+        # desheight = int((base + height) * 100)
+        desheight = int((base + 0.05 * blocknum) * 100)
+        q = blueposdict[desheight]
+        arm.safe_move_to_position(q)

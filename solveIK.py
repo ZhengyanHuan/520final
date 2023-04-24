@@ -19,7 +19,7 @@ class IK:
     center = lower + (upper - lower) / 2 # compute middle of range of motion of each joint
     fk = FK()
 
-    def __init__(self,linear_tol=1e-4, angular_tol=1e-3, max_steps=500, min_step_size=1e-5):
+    def __init__(self,linear_tol=1e-4, angular_tol=1e-3, max_steps=100, min_step_size=1e-5):
         """
         Constructs an optimization-based IK solver with given solver parameters.
         Default parameters are tuned to reasonable values.
@@ -325,40 +325,6 @@ if __name__ == "__main__":
     #     d, ang = IK.distance_and_angle(target,pose)
     #     print('iteration:',i,' q =',q, ' d={d:3.4f}  ang={ang:3.3f}'.format(d=d,ang=ang))
 
-    # print("Success: ",success)
-    # print("Solution: ",q)
+    print("Success: ",success)
+    print("Solution: ",q)
     # print("Iterations:", len(rollout))
-
-    print("dict for red")
-    redposdict = {}
-    redHdict = {}
-    ydest = -0.169
-    base = 0.23
-    seed = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
-    for i in range(0,50):
-        height = i * 0.01
-        destpos = np.array([0.562, ydest, base + height])
-        destangle = np.array([0, pi, pi])
-        target = transform(destpos, destangle)
-        q, success = ik.inverse(target, seed)
-        # print(i,success)
-        # print(q)
-        if success:
-            redposdict[int((base + height)*100)] = q
-            redHdict[int((base + height)*100)] = target
-
-    # base = 0.25
-    # for i in range(0,12):
-    #     height = i * 0.05
-    #     destpos = np.array([0.562, ydest, base + height])
-    #     destangle = np.array([0, pi, pi])
-    #     target = transform(destpos, destangle)
-    #     q, success = ik.inverse(target, seed)
-    #     # print(i,success)
-    #     # print(q)
-    #     if success:
-    #         redposdict[int((base + height)*100)] = q
-    #         redHdict[int((base + height)*100)] = target
-
-    print(redposdict)
-    print(redHdict)
