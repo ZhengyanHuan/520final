@@ -159,11 +159,11 @@ if __name__ == "__main__":
     start_time = time.time()
     height = 0
     ik = solveIK.IK()
-    base = 0.25
+
     # STUDENT CODE HERE
 
     # get the transform from camera to panda_end_effector
-    # ''' staticblock
+    #''' staticblock
     H_ee_camera = detector.get_H_ee_camera()
     # print(H_ee_camera)
 
@@ -173,20 +173,22 @@ if __name__ == "__main__":
                               , [0., -1., 0., -0.169]
                               , [-0., -0., -1., 0.6]
                               , [0., 0., 0., 1.]]) # change this and use this in solveik to get the start position: start_position2
-
+        base = 0.25
         ydest = 0.169
         start_position2 = np.array([-0.1681, 0.24085, -0.16154, -1.04058, 0.04007, 1.27863, 0.47189])
         start_position_n = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
         posdest = start_position_n
     else:
-        startH = np.array([[1., 0., -0., 0.562]
+        startH =  np.array([[1., 0., -0., 0.502]
                               , [0., -1., 0., 0.169]
                               , [-0., -0., -1., 0.6]
-                              , [0., 0., 0.,1.]])  # change this and use this in solveik to get the start position: start_position2
+                              , [0., 0., 0.,1.]])
+#   # change this and use this in solveik to get the start position: start_position2
         ydest = -0.169
-        start_position2 = np.array([ 0.25669,  0.23861,  0.04605, -1.04074, -0.01136,  1.27912,  1.08358])
+        start_position2 = np.array([ 0.16431,  0.00341,  0.16094, -1.35592, -0.00056,  1.35928,  1.11053])
         start_position_n = np.array([-0.14589, 0.1306, -0.16275, -1.36351, 0.02117, 1.49242, 0.47977])
         posdest = start_position_n
+        base = 0.26
     # The position to take a photo of the static blocks, should be changed according to real situaltion
     #    target = transform(np.array([0.562,-0.169,0.538]), np.array([0,pi,pi]))
     arm.safe_move_to_position(start_position2)
@@ -202,7 +204,7 @@ if __name__ == "__main__":
 
 
     # base = 0.23
-    for i in range(4):
+    for i in range(len(cubeH_list)):
         H1 = startH @ H_ee_camera @ cubeH_list[i]  # calculate the position of a block w.r.t to ROBOT's world frame
         # print("cubeH")
         # print(cubeH_list[i])  # the position of a block w.r.t to camera
@@ -292,8 +294,8 @@ if __name__ == "__main__":
         height += 0.05
 
 #####################################################################################################################################
-    # '''
-    # ''' dynamicblock
+    #'''
+    #''' dynamicblock
     if team == 'red':
         startH_D = np.array([[0., 1., -0., -0.15]
                                 , [1., 0., 0., 0.68]
@@ -328,8 +330,8 @@ if __name__ == "__main__":
     arm.exec_gripper_cmd(0.2, 50)
 
     H_ee_camera = detector.get_H_ee_camera()
-    for test_num in range(100):
-        if height>0.05*10:
+    for test_num in range(1000):
+        if height>0.05*7:
             break
         t_robot = 2.5
         mode = 1
@@ -349,7 +351,9 @@ if __name__ == "__main__":
             else:
                 if team == 'red':
                     print(HD1)
-                    if HD1[0][3] > -0.05:
+                    if HD1[0][3]>0:
+                        continue
+                    elif HD1[0][3] > -0.05:
                         # HD_predicted = predict(HD1, t_robot + 0.4, T)
                         mode = 1
                         HD_predicted = predictred(HD1, t_robot + 1, T)
@@ -365,7 +369,9 @@ if __name__ == "__main__":
                     print(HD_predicted)
                 else:
                     print(HD1)
-                    if HD1[0][3] < 0.05:
+                    if HD1[0][3] < 0:
+                        continue
+                    elif HD1[0][3] < 0.05:
                         # HD_predicted = predict(HD1, t_robot + 0.4, T)
                         mode = 1
                         HD_predicted = predictblue(HD1, t_robot + 0.4 +1.2, T)
@@ -427,13 +433,15 @@ if __name__ == "__main__":
                 q[1] = q[1] - pi / 16
                 arm.safe_move_to_position(q)
                 height += 0.05
+                if height > 0.05 * 7:
+                    height += 0.02
                 break
-    # '''
+    #'''
     # finalblock
     blocknum = 7
     if team == 'red':
-        arm.safe_move_to_position(np.array([0.48191, 0.70581, 0.43095, -1.64602, 0.86034, 1.18666, 1.58699]))
-        arm.safe_move_to_position(np.array([1.26903, 1.68165, 0.77691, -0.1, 0.76238, 1.26121, 2.24985]))
+        arm.safe_move_to_position(np.array([1.8 - pi/6, 1.05736, 0.07333, -0.9511, -2.55619, 2.61064, -2.89]))
+        arm.safe_move_to_position(np.array([1.8 - pi / 8, 1.05736, 0.07333, -0.9511, -2.55619, 2.61064, -2.89]))
         while True:
             arm.exec_gripper_cmd(0.0, 50)
             gstate = arm.get_gripper_state()
@@ -441,10 +449,11 @@ if __name__ == "__main__":
                 break
             arm.exec_gripper_cmd(0.2, 50)
 
-        while time.time()-start_time <= 60*4+30:
+        # while time.time()-start_time <= 60*4+900:
+        #     pass
+        while True:
             pass
-
-        arm.safe_move_to_position(np.array([1.26903, 1.68165-pi/4, 0.77691, -0.1, 0.76238, 1.26121, 2.24985]))
+        arm.safe_move_to_position(np.array([1.8, 1.05736-pi/4, 0.07333, -0.9511, -2.55619, 2.61064, -2.89]))
         # desheight = int((base + height) * 100)
         desheight = int((base + 0.05*blocknum) * 100)
         q = redposdict[desheight]
@@ -456,7 +465,8 @@ if __name__ == "__main__":
         # q[1] = q[1] - pi / 16
         # arm.safe_move_to_position(q)
 
-        arm.safe_move_to_position(np.array([-1.3227  , 1.05736 , 0.07333 ,-0.9511 , -2.55619 , 2.61064 , -2.89]))
+        arm.safe_move_to_position(np.array([-1.3227 -pi/6 , 1.05736 , 0.07333 ,-0.9511 , -2.55619 , 2.61064 , -2.89]))
+        arm.safe_move_to_position(np.array([-1.3227 -pi/8, 1.05736, 0.07333, -0.9511, -2.55619, 2.61064, -2.89]))
         while True:
             arm.exec_gripper_cmd(0.0, 50)
             gstate = arm.get_gripper_state()
@@ -464,7 +474,9 @@ if __name__ == "__main__":
                 break
             arm.exec_gripper_cmd(0.2, 50)
 
-        while time.time()-start_time <= 60*4+30:
+        # while time.time()-start_time <= 60*4+30:
+        #     pass
+        while True:
             pass
 
         arm.safe_move_to_position(np.array([-1.3227  , 1.05736-pi/4 , 0.07333 ,-0.9511 , -2.55619 , 2.61064 , -2.89]))
